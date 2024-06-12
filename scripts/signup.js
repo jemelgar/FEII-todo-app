@@ -8,10 +8,6 @@ window.addEventListener('load', function () {
   const passwordRepeat = document.getElementById('inputPasswordRepetida');
   const apiUrl = 'https://todo-api.digitalhouse.com/v1';
 
-  const verifyJwt = () => {
-    const isJWTDefined = localStorage.getItem('jwt');
-    if (isJWTDefined) location.replace('../mis-tareas.html');
-  };
   verifyJwt();
 
   /* -------------------------------------------------------------------------- */
@@ -55,12 +51,11 @@ window.addEventListener('load', function () {
   async function realizarRegister(settings) {
     try {
       const response = await fetch(`${apiUrl}/users`, settings);
-      console.log(response);
 
       if (!response.ok) throw new Error('Algo salío mal, intenta más tarde');
 
       const data = await response.json();
-      if (data.jwt) localStorage.setItem('jwt', JSON.stringify(data.jwt));
+      if (data.jwt) localStorage.setItem('jwt', data.jwt);
     } catch (error) {
       console.error(`Algo salió mal: ${error}`);
     }

@@ -6,10 +6,6 @@ window.addEventListener('load', function () {
   const email = document.querySelector('#inputEmail');
   const pass = document.querySelector('#inputPassword');
 
-  const verifyJwt = () => {
-    const isJWTDefined = localStorage.getItem('jwt');
-    if (isJWTDefined) location.replace('../mis-tareas.html');
-  };
   verifyJwt();
   /* -------------------------------------------------------------------------- */
   /*            FUNCIÓN 1: Escuchamos el submit y preparamos el envío           */
@@ -40,12 +36,9 @@ window.addEventListener('load', function () {
         return res.json();
       })
       .then((data) => {
-        console.log(data);
         if (data.jwt) {
           localStorage.setItem('jwt', data.jwt);
-          setTimeout(() => {
-            location.replace('./mis-tareas.html');
-          }, 2000);
+          location.replace('./mis-tareas.html');
         }
       })
       .catch((err) => console.log(err));

@@ -4,6 +4,10 @@ const regExpHandler = (string, regExp, error) => {
   return true;
 };
 
+const verifyJwt = () => {
+  const isJWTDefined = localStorage.getItem('jwt');
+  if (isJWTDefined) location.replace('../mis-tareas.html');
+};
 /* ---------------------------------- texto --------------------------------- */
 function validarTexto(texto) {
   //validamos length
