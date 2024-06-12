@@ -1,7 +1,7 @@
 // SEGURIDAD: Si no se encuentra en localStorage info del usuario
 // no lo deja acceder a la página, redirigiendo al login inmediatamente.
 const isJWTDefined = localStorage.getItem('jwt');
-if (!isJWTDefined) location.replace('../');
+if (!isJWTDefined) location.replace('../index.html');
 /* ------ comienzan las funcionalidades una vez que carga el documento ------ */
 window.addEventListener('load', function () {
   /* ---------------- variables globales y llamado a funciones ---------------- */
