@@ -14,6 +14,7 @@ window.addEventListener('load', function () {
   const tareasPendientes = document.querySelector('.tareas-pendientes');
   const tareasTerminadas = document.querySelector('.tareas-terminadas');
   let btnChangeState = '';
+  let btnDeleteTask = '';
 
   /* -------------------------------------------------------------------------- */
   /*                          FUNCIÓN 1 - Cerrar sesión                         */
@@ -124,11 +125,18 @@ window.addEventListener('load', function () {
     });
     //ya que tenemos cargadas las tareas agregamos el evento click a cada una
     btnChangeState = document.querySelectorAll('.change');
-    btnChangeState.forEach((btn) => {
+    btnDeleteTask = document.querySelectorAll('.borrar');
+
+    const taskBtns = [...btnChangeState, ...btnDeleteTask];
+    taskBtns.forEach((btn) => {
       btn.addEventListener('click', (e) => {
-        botonesCambioEstado(e.target.id);
+        const txt = e.target.className;
+        txt.includes('borrar')
+          ? botonBorrarTarea(e.target.id)
+          : botonesCambioEstado(e.target.id);
       });
     });
+
     return btnChangeState;
   }
 
@@ -144,6 +152,7 @@ window.addEventListener('load', function () {
     };
 
     //cargamos la info de la task desde el server mediante el id
+    // ya que si tomamos la info en el front es posible manpular el texto y enviar cambios fuera de la regla de negocio
     const response = await fetch(`${apiUrl}/tasks/${taskId}`, settings);
     const data = await response.json();
     //al ser un boolean podemos negar el valor de completed para obtener su inverso
@@ -165,5 +174,16 @@ window.addEventListener('load', function () {
   /* -------------------------------------------------------------------------- */
   /*                     FUNCIÓN 7 - Eliminar tarea [DELETE]                    */
   /* -------------------------------------------------------------------------- */
-  function botonBorrarTarea() {}
+  async function botonBorrarTarea(taskId) {
+    const settings = {
+      method: 'DELETE',
+      headers: {
+        authorization: token,
+      },
+    };
+    const res = await fetch(`${apiUrl}/tasks/${taskId}`, settings);
+    const data = await res.json();
+    console.log(data);
+    consultarTareas();
+  }
 });
