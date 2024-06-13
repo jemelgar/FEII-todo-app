@@ -1,7 +1,8 @@
 // SEGURIDAD: Si no se encuentra en localStorage info del usuario
 // no lo deja acceder a la página, redirigiendo al login inmediatamente.
-const isJWTDefined = localStorage.getItem('jwt');
-if (!isJWTDefined) location.replace('../index.html');
+if (!localStorage.getItem('jwt')) {
+  location.replace('../index.html');
+}
 /* ------ comienzan las funcionalidades una vez que carga el documento ------ */
 window.addEventListener('load', function () {
   /* ---------------- variables globales y llamado a funciones ---------------- */
@@ -13,9 +14,26 @@ window.addEventListener('load', function () {
   const userName = document.querySelector('.user-info p');
   const tareasPendientes = document.querySelector('.tareas-pendientes');
   const tareasTerminadas = document.querySelector('.tareas-terminadas');
-  let btnChangeState = '';
-  let btnDeleteTask = '';
 
+  //Función helper para armar los settings para fetch
+  function HTTPSettings(method, bodyData) {
+    const settings = {
+      method: method,
+      headers: {
+        authorization: token,
+        'Content-Type': 'application/json',
+      },
+    };
+    if (bodyData) settings.body = JSON.stringify(bodyData);
+    return settings;
+  }
+
+  //Helper para manejar las dos promesas en cada consulta a la api
+  async function sendFetch(route, settings) {
+    const res = await fetch(`${apiUrl}/${route}`, settings);
+    if (!res.ok) throw new Error(`Error en la solicitud: ${res.status}`);
+    return await res.json();
+  }
   /* -------------------------------------------------------------------------- */
   /*                          FUNCIÓN 1 - Cerrar sesión                         */
   /* -------------------------------------------------------------------------- */
@@ -30,15 +48,13 @@ window.addEventListener('load', function () {
   /* -------------------------------------------------------------------------- */
 
   (async function obtenerNombreUsuario() {
-    const settings = {
-      method: 'GET',
-      headers: {
-        authorization: token,
-      },
-    };
-    const response = await fetch(`${apiUrl}/users/getMe`, settings);
-    const data = await response.json();
-    userName.textContent = data.firstName;
+    try {
+      const settings = HTTPSettings('GET');
+      const data = await sendFetch('users/getMe', settings);
+      userName.textContent = data.firstName;
+    } catch (error) {
+      console.error('Error al cargar el nombre de usuario: ', error);
+    }
   })(); // IIFE para que se ejecute al cargar
 
   /* -------------------------------------------------------------------------- */
@@ -46,16 +62,14 @@ window.addEventListener('load', function () {
   /* -------------------------------------------------------------------------- */
 
   async function consultarTareas() {
-    const settings = {
-      method: 'GET',
-      headers: {
-        authorization: token,
-      },
-    };
-    const response = await fetch(`${apiUrl}/tasks`, settings);
-    const data = await response.json();
-    if (data) return renderizarTareas(data);
-    return console.log('No hay tareas');
+    try {
+      const settings = HTTPSettings('GET');
+      const data = await sendFetch('tasks', settings);
+      renderizarTareas(data);
+      if (!data.length) return console.log('No hay tareas');
+    } catch (error) {
+      console.log('Error al cargar las tareas:', error);
+    }
   }
   consultarTareas();
 
@@ -66,18 +80,13 @@ window.addEventListener('load', function () {
   formCrearTarea.addEventListener('submit', async function (event) {
     event.preventDefault();
     const payload = { description: nuevaTarea.value, completed: false };
-    console.log(payload);
-
-    const settings = {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      headers: {
-        authorization: token,
-        'Content-Type': 'application/json',
-      },
-    };
-    await fetch(`${apiUrl}/tasks`, settings);
-    await consultarTareas();
+    const settings = HTTPSettings('POST', payload);
+    try {
+      await fetch(`${apiUrl}/tasks`, settings);
+      consultarTareas();
+    } catch (error) {
+      console.log('Error al crear la tarea', error);
+    }
   });
 
   /* -------------------------------------------------------------------------- */
@@ -123,67 +132,48 @@ window.addEventListener('load', function () {
         tareasPendientes.innerHTML += htmlTareaPendiente;
       }
     });
-    //ya que tenemos cargadas las tareas agregamos el evento click a cada una
-    btnChangeState = document.querySelectorAll('.change');
-    btnDeleteTask = document.querySelectorAll('.borrar');
+    //Delegamos el evento al padre para pasarlo a los hijos
+    tareasPendientes.addEventListener('click', manejarBotones);
+    tareasTerminadas.addEventListener('click', manejarBotones);
+  }
+  function manejarBotones(e) {
+    const btn = e.target.closest('button');
+    if (!btn) return;
 
-    const taskBtns = [...btnChangeState, ...btnDeleteTask];
-    taskBtns.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const txt = e.target.className;
-        txt.includes('borrar')
-          ? botonBorrarTarea(e.target.id)
-          : botonesCambioEstado(e.target.id);
-      });
-    });
-
-    return btnChangeState;
+    if (btn.classList.contains('borrar')) {
+      botonBorrarTarea(btn.id);
+    } else if (btn.classList.contains('change')) {
+      botonesCambioEstado(btn.id);
+    }
   }
 
   /* -------------------------------------------------------------------------- */
   /*                  FUNCIÓN 6 - Cambiar estado de tarea [PUT]                 */
   /* -------------------------------------------------------------------------- */
   async function botonesCambioEstado(taskId) {
-    const settings = {
-      method: 'GET',
-      headers: {
-        authorization: token,
-      },
-    };
-
+    const settings = HTTPSettings('GET');
     //cargamos la info de la task desde el server mediante el id
     // ya que si tomamos la info en el front es posible manpular el texto y enviar cambios fuera de la regla de negocio
-    const response = await fetch(`${apiUrl}/tasks/${taskId}`, settings);
-    const data = await response.json();
+    const data = await sendFetch(`tasks/${taskId}`, settings);
     //al ser un boolean podemos negar el valor de completed para obtener su inverso
     data.completed = !data.completed;
-
-    //mandamos la nueva info de la task (al ser PUT es necesario mandar todo)
-    const settingsPut = {
-      method: 'PUT',
-      body: JSON.stringify(data),
-      headers: {
-        authorization: token,
-        'Content-Type': 'application/json',
-      },
-    };
+    //mandamos la nueva info de la task (al ser PUT es necesario mandar todo🙃)
+    const settingsPut = HTTPSettings('PUT', data);
     await fetch(`${apiUrl}/tasks/${taskId}`, settingsPut);
-    await consultarTareas();
+    consultarTareas();
   }
 
   /* -------------------------------------------------------------------------- */
   /*                     FUNCIÓN 7 - Eliminar tarea [DELETE]                    */
   /* -------------------------------------------------------------------------- */
   async function botonBorrarTarea(taskId) {
-    const settings = {
-      method: 'DELETE',
-      headers: {
-        authorization: token,
-      },
-    };
-    const res = await fetch(`${apiUrl}/tasks/${taskId}`, settings);
-    const data = await res.json();
-    console.log(data);
-    consultarTareas();
+    try {
+      const settings = HTTPSettings('DELETE');
+      const data = await sendFetch(`tasks/${taskId}`, settings);
+      console.log(data);
+      consultarTareas();
+    } catch (error) {
+      console.log('Error al borrar la tara:', error);
+    }
   }
 });
