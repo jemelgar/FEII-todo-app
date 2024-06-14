@@ -14,6 +14,7 @@ window.addEventListener('load', function () {
   const userName = document.querySelector('.user-info p');
   const tareasPendientes = document.querySelector('.tareas-pendientes');
   const tareasTerminadas = document.querySelector('.tareas-terminadas');
+  const cantTareasTerminadas = document.getElementById('cantidad-finalizadas');
 
   //Función helper para armar los settings para fetch
   function HTTPSettings(method, bodyData) {
@@ -39,8 +40,11 @@ window.addEventListener('load', function () {
   /* -------------------------------------------------------------------------- */
 
   btnCerrarSesion.addEventListener('click', function () {
-    localStorage.clear();
-    location.replace('../index.html');
+    const confirmClose = confirm('¿Estás seguro que quieres salir?');
+    if (confirmClose) {
+      localStorage.clear();
+      location.replace('../index.html');
+    }
   });
 
   /* -------------------------------------------------------------------------- */
@@ -83,6 +87,7 @@ window.addEventListener('load', function () {
     const settings = HTTPSettings('POST', payload);
     try {
       await fetch(`${apiUrl}/tasks`, settings);
+      formCrearTarea.reset();
       consultarTareas();
     } catch (error) {
       console.log('Error al crear la tarea', error);
@@ -95,9 +100,11 @@ window.addEventListener('load', function () {
   function renderizarTareas(listado) {
     tareasTerminadas.innerHTML = '';
     tareasPendientes.innerHTML = '';
+    let completedTasks = 0;
 
     listado.forEach((tarea) => {
       if (tarea.completed) {
+        completedTasks++;
         const htmlTareaCompleta = `
         <li class="tarea">
         <div class="hecha">
@@ -132,6 +139,7 @@ window.addEventListener('load', function () {
         tareasPendientes.innerHTML += htmlTareaPendiente;
       }
     });
+    cantTareasTerminadas.innerText = completedTasks;
     //Delegamos el evento al padre para pasarlo a los hijos
     tareasPendientes.addEventListener('click', manejarBotones);
     tareasTerminadas.addEventListener('click', manejarBotones);
