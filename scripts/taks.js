@@ -40,11 +40,20 @@ window.addEventListener('load', function () {
   /* -------------------------------------------------------------------------- */
 
   btnCerrarSesion.addEventListener('click', function () {
-    const confirmClose = confirm('¿Estás seguro que quieres salir?');
-    if (confirmClose) {
-      localStorage.clear();
-      location.replace('../index.html');
-    }
+    Swal.fire({
+      title: 'Cerrar sesión',
+      text: '¿Seguro que deseas cerrar sesión?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Cerrar Sesión',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        localStorage.clear();
+        location.replace('../index.html');
+      }
+    });
   });
 
   /* -------------------------------------------------------------------------- */
@@ -58,6 +67,12 @@ window.addEventListener('load', function () {
       userName.textContent = data.firstName;
     } catch (error) {
       console.error('Error al cargar el nombre de usuario: ', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error...',
+        text: 'al cargar el nombre de usuario',
+        footer: error.message,
+      });
     }
   })(); // IIFE para que se ejecute al cargar
 
@@ -73,6 +88,12 @@ window.addEventListener('load', function () {
       if (!data.length) return console.log('No hay tareas');
     } catch (error) {
       console.log('Error al cargar las tareas:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error...',
+        text: 'al cargar las tareas',
+        footer: error.message,
+      });
     }
   }
   consultarTareas();
@@ -86,11 +107,17 @@ window.addEventListener('load', function () {
     const payload = { description: nuevaTarea.value, completed: false };
     const settings = HTTPSettings('POST', payload);
     try {
-      await fetch(`${apiUrl}/tasks`, settings);
+      await sendFetch(`tasks`, settings);
       formCrearTarea.reset();
       consultarTareas();
     } catch (error) {
       console.log('Error al crear la tarea', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error...',
+        text: 'al crear la tarea',
+        footer: error.message,
+      });
     }
   });
 
@@ -103,6 +130,7 @@ window.addEventListener('load', function () {
     let completedTasks = 0;
 
     listado.forEach((tarea) => {
+      const fecha = new Date(tarea.createdAt);
       if (tarea.completed) {
         completedTasks++;
         const htmlTareaCompleta = `
@@ -132,7 +160,7 @@ window.addEventListener('load', function () {
           </button>
           <div class="descripcion">
             <p class="nombre">${tarea.description}</p>
-            <p class="timestamp">${tarea.createdAt}</p>
+            <p class="timestamp">${fecha.toLocaleDateString()}</p>
           </div>
         </li>
       `;
@@ -162,13 +190,22 @@ window.addEventListener('load', function () {
     const settings = HTTPSettings('GET');
     //cargamos la info de la task desde el server mediante el id
     // ya que si tomamos la info en el front es posible manpular el texto y enviar cambios fuera de la regla de negocio
-    const data = await sendFetch(`tasks/${taskId}`, settings);
-    //al ser un boolean podemos negar el valor de completed para obtener su inverso
-    data.completed = !data.completed;
-    //mandamos la nueva info de la task (al ser PUT es necesario mandar todo🙃)
-    const settingsPut = HTTPSettings('PUT', data);
-    await fetch(`${apiUrl}/tasks/${taskId}`, settingsPut);
-    consultarTareas();
+    try {
+      const data = await sendFetch(`tasks/${taskId}`, settings);
+      //al ser un boolean podemos negar el valor de completed para obtener su inverso
+      data.completed = !data.completed;
+      //mandamos la nueva info de la task (al ser PUT es necesario mandar todo🙃)
+      const settingsPut = HTTPSettings('PUT', data);
+      await fetch(`${apiUrl}/tasks/${taskId}`, settingsPut);
+      consultarTareas();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error...',
+        text: 'al cambiar las tareas',
+        footer: error.message,
+      });
+    }
   }
 
   /* -------------------------------------------------------------------------- */
@@ -182,6 +219,12 @@ window.addEventListener('load', function () {
       consultarTareas();
     } catch (error) {
       console.log('Error al borrar la tara:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error...',
+        text: 'al borrar la tarea',
+        footer: error.message,
+      });
     }
   }
 });
